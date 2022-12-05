@@ -109,9 +109,9 @@ void *run(void *_n)
 	int m_size;
 	int m_last_size = -1;
 
-	char *obj;
-	int obj_size;
-	char *obj_m;
+	char *obj = NULL;
+	int obj_size = 0;
+	char *obj_m = NULL;
 
 	unsigned char hash[20];
 
