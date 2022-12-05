@@ -146,7 +146,7 @@ void *run(void *_n)
 
 		memcpy(obj_m, m_str, m_size);
 
-		SHA1(obj, obj_size, hash);
+		SHA1((unsigned char *)obj, obj_size, hash);
 
 		if (is_target_hit(hash)) {
 			magic = m;
