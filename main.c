@@ -129,7 +129,7 @@ void *run(void *_n)
 			int commit_size = commit_template_size + m_size + 1;
 
 			char obj_header[18];
-			sprintf(obj_header, "commit %d", commit_size);
+			sprintf(obj_header, "commit %u", (unsigned int)commit_size);
 			int obj_header_size = strlen(obj_header);
 
 			obj_size = obj_header_size + 1 + commit_size;
