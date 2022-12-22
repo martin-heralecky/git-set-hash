@@ -1,0 +1,32 @@
+.TH GIT-SET-HASH 1 2022-12-22 "git-set-hash 1.0.0" "User Commands"
+.SH NAME
+git-set-hash \- change hash of a commit
+.SH SYNOPSIS
+.sp
+\fIgit set-hash\fR [-h] <hash>
+.SH DESCRIPTION
+.sp
+Amend the commit pointed to by HEAD so that the new commit's hash begins with <hash>. This is done by appending a short text (called \fImagic\fR) to the commit message.
+.sp
+Finding the magic is a computationally demanding operation, which requires computing large amounts of SHA1 hashes. The more characters there are in <hash>, the longer it takes to find the magic. This computation is distributed across all available CPUs (threads). As a rough estimate, on 16 threads, finding magic for a hash of 8 characters takes around 1-5 minutes.
+.SH OPTIONS
+.sp
+\-h, \-\-help
+.RS 4
+Print usage information to stdout and exit.
+.RE
+.SH EXAMPLES
+.sp
+Create a commit and set it's hash to begin with "cafe0000".
+.sp
+.RS 4
+.nf
+$ git commit -m ...
+$ git set-hash cafe0000
+.RE
+.SH AUTHORS
+.sp
+Martin Heralecky <heralecky.martin@gmail.com>
+.SH SEE ALSO
+.sp
+Project page on GitHub: \fIhttps://github.com/martin-heralecky/git-set-hash\fR

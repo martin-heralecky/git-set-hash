@@ -214,8 +214,8 @@ int compute(const char *commit_raw, char **trailer_out)
 
 int main(int argc, char **argv)
 {
-	if (argc != 2 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-		fprintf(stderr, "usage\n"); // TODO
+	if (argc != 2 || argv[1][0] == '-') {
+		printf("usage: git-set-hash [-h|--help] <hash>\n");
 		return 1;
 	}
 
