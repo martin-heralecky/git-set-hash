@@ -25,6 +25,7 @@ int parse_target(const char *arg)
 	target_size = strlen(arg);
 
 	if (target_size < 1 || target_size > 40) {
+		fprintf(stderr, "error: length of target hash is not between 1 and 40 bytes\n");
 		return -1;
 	}
 
@@ -37,6 +38,7 @@ int parse_target(const char *arg)
 		} else if (c >= 'a' && c <= 'f') {
 			target[i] = c - 'a' + 10;
 		} else {
+			fprintf(stderr, "error: invalid character in target hash: %c\n", c);
 			return -1;
 		}
 	}
@@ -167,18 +169,23 @@ int compute(const char *commit_raw, char **trailer_out)
 	sprintf(commit_template, "%s\nmagic: ", commit_raw);
 
 	if (get_cpu_count(&cpu_count) != 0) {
+		fprintf(stderr, "error: could not get CPU count\n");
 		return -1;
 	}
+
+	printf("computing hashes on %d threads...\n", cpu_count);
 
 	pthread_t *threads = calloc(cpu_count, sizeof(pthread_t));
 	for (int i = 0; i < cpu_count; ++i) {
 		if (pthread_create(&threads[i], NULL, run, (void *)(unsigned long long)i) != 0) {
+			fprintf(stderr, "error: could not create thread\n");
 			return -1;
 		}
 	}
 
 	for (int i = 0; i < cpu_count; ++i) {
 		if (pthread_join(threads[i], NULL) != 0) {
+			fprintf(stderr, "error: could not join thread\n");
 			return -1;
 		}
 	}
@@ -187,6 +194,7 @@ int compute(const char *commit_raw, char **trailer_out)
 	free(commit_template);
 
 	if (!found) {
+		fprintf(stderr, "error: magic not found\n");
 		return -1;
 	}
 
@@ -194,7 +202,7 @@ int compute(const char *commit_raw, char **trailer_out)
 	int magic_str_size;
 	format_magic(magic, magic_str, &magic_str_size);
 
-	printf("magic: %s\n", magic_str);
+	printf("found magic: %s\n", magic_str);
 
 	*trailer_out = malloc(8 + magic_str_size + 2);
 	strcpy(*trailer_out, "\nmagic: ");
@@ -206,50 +214,53 @@ int compute(const char *commit_raw, char **trailer_out)
 
 int main(int argc, char **argv)
 {
-	if (argc != 2) {
-		return -1;
-	}
-
-	if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-		return -1;
+	if (argc != 2 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+		fprintf(stderr, "usage\n"); // TODO
+		return 1;
 	}
 
 	if (parse_target(argv[1]) != 0) {
-		return -1;
+		fprintf(stderr, "error: could not parse target hash\n");
+		return 1;
 	}
 
 	git_libgit2_init();
 
 	git_repository *repo;
 	if (git_repository_open(&repo, ".") != 0) {
-		return -1;
+		fprintf(stderr, "error: could not open git repository\n");
+		return 1;
 	}
 
 	git_oid commit_id;
 	if (git_reference_name_to_id(&commit_id, repo, "HEAD") != 0) {
-		return -1;
+		fprintf(stderr, "error: could not find reference HEAD\n");
+		return 1;
 	}
 
 	git_commit *commit;
 	if (git_commit_lookup(&commit, repo, &commit_id) != 0) {
-		return -1;
+		fprintf(stderr, "error: could not find commit for HEAD\n");
+		return 1;
 	}
 
 	git_odb *odb;
 	if (git_repository_odb(&odb, repo) != 0) {
-		return -1;
+		fprintf(stderr, "error: could not get repository ODB\n");
+		return 1;
 	}
 
 	git_odb_object *commit_odb_obj;
 	if (git_odb_read(&commit_odb_obj, odb, &commit_id) != 0) {
-		return -1;
+		fprintf(stderr, "error: could not read commit object from ODB\n");
+		return 1;
 	}
 
 	const char *commit_raw = git_odb_object_data(commit_odb_obj);
 
 	char *trailer;
 	if (compute(commit_raw, &trailer) != 0) {
-		return -1;
+		return 1;
 	}
 
 	git_odb_object_free(commit_odb_obj);
@@ -265,19 +276,21 @@ int main(int argc, char **argv)
 	free(trailer);
 
 	if (git_commit_amend(&commit_id, commit, "HEAD", NULL, NULL, NULL, new_msg, NULL) != 0) {
-		return -1;
+		fprintf(stderr, "error: could not amend commit\n");
+		return 1;
 	}
 
 	free(new_msg);
-	git_commit_free(commit);
-	git_repository_free(repo);
 
 	char commit_hash[40];
 	if (git_oid_fmt(commit_hash, &commit_id) != 0) {
-		return -1;
+		return 1;
 	}
 
-	printf("hash: %.40s\n", commit_hash);
+	printf("[%.40s] %s\n", commit_hash, git_commit_summary(commit));
+
+	git_commit_free(commit);
+	git_repository_free(repo);
 
 	return 0;
 }
