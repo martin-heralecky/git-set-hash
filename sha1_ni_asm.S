@@ -4,7 +4,6 @@
 
 #define DIGEST_PTR	%rdi	/* 1st arg */
 #define DATA_PTR	%rsi	/* 2nd arg */
-#define NUM_BLKS	%rdx	/* 3rd arg */
 
 /* gcc conversion */
 #define FRAME_SIZE	32	/* space for 2x16 bytes */
@@ -46,10 +45,6 @@ sha1_ni_transform:
 	mov		%rsp, %rbp
 	sub		$FRAME_SIZE, %rsp
 	and		$~0xF, %rsp
-
-	shl		$6, NUM_BLKS		/* convert to bytes */
-	jz		.Ldone_hash
-	add		DATA_PTR, NUM_BLKS	/* pointer to end of data */
 
 	/* load initial hash values */
 	pinsrd		$3, 1*16(DIGEST_PTR), E0
@@ -223,11 +218,6 @@ sha1_ni_transform:
 	/* Add current hash values with previously saved */
 	sha1nexte	(0*16)(%rsp), E0
 	paddd		(1*16)(%rsp), ABCD
-
-	/* Increment data pointer and loop if more to process */
-	add		$64, DATA_PTR
-	cmp		NUM_BLKS, DATA_PTR
-	jne		.Lloop0
 
 	/* Write hash values back in the correct order */
 	pshufd		$0x1B, ABCD, ABCD
